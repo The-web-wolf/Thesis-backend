@@ -1,6 +1,4 @@
 import google.generativeai as genai
-
-# Initialize game state
 game_state = {
     "hireability": 50,
     "progress": [],
@@ -9,13 +7,38 @@ game_state = {
 
 maxSteps = 5
 hiringThreshold = 70
-maxGainPoints = 10
-minGainPoints = 10
+
+# Difficulty level selection
+difficulty = input("Choose difficulty (light, medium, hard, ultra-hard): ").lower()
+
+if difficulty == "light":
+    maxGainPoints = 10
+    maxLosingPoints = 2
+    hiringThreshold = 60
+elif difficulty == "medium":
+    maxSteps = 6
+    maxGainPoints = 7
+    maxLosingPoints = 5
+    hiringThreshold = 70
+elif difficulty == "hard":
+    maxSteps = 8
+    maxGainPoints = 5
+    maxLosingPoints = 7
+    hiringThreshold = 70
+elif difficulty == "ultra-hard":
+    maxSteps = 10
+    maxGainPoints = 3
+    maxLosingPoints = 9
+    hiringThreshold = 62
+else:
+    print("Invalid difficulty, defaulting to medium.")
+    maxGainPoints = 7
+    maxLosingPoints = 5
 
 genai.configure(api_key='AIzaSyCzO8JqOHfdcm8xcKecBA1NpIAj2FsA0V8')
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-def generate_story_step(current_state):
+def generate_story_step(current_state, maxGainPoints=maxGainPoints, maxLosingPoints=maxLosingPoints):
     """Generate the next story step based on the current game state."""
     prompt = f'''
       You are narrating an interactive story set in the world of Suits, where the player takes on the role of Mike Ross navigating his interview at Pearson Hardman. The goal is to determine the player's "hireability," starting at 50, which changes based on their choices.
@@ -46,14 +69,14 @@ def generate_story_step(current_state):
         ]
       }}
 
-      - Ensure "effect" reflects the impact each choice has on hireability, ranging FROM -{minGainPoints} to +{maxGainPoints}.
+      - Ensure "effect" reflects the impact each choice has on hireability, ranging FROM -{maxLosingPoints} to +{maxGainPoints}.
       - Keep the tone engaging, and align the narrative with Suits' high-stakes legal drama.
       - Do NOT add extra text — only output the object WITHOUT ANY FORMATTING.
     '''
     response = model.generate_content(prompt)
     return response.text.strip()
 
-def interpret_user_input(user_input, current_state, step_story):
+def interpret_user_input(user_input, current_state, step_story, maxGainPoints=maxGainPoints, maxLosingPoints=maxLosingPoints):
     """Interpret custom user input and determine its effect on hireability."""
     prompt = f'''
       Player hireability: {current_state["hireability"]}.
@@ -67,7 +90,7 @@ def interpret_user_input(user_input, current_state, step_story):
         "reasoning": ""
       }}
       
-      - Ensure "effect" reflects the impact each choice has on hireability, ranging FROM -5 to +5.
+      - Ensure "effect" reflects the impact each choice has on hireability, ranging FROM -{maxLosingPoints} to +{maxGainPoints}.
       - Do NOT add extra text — only output the object WITHOUT ANY FORMATTING.
     '''
     response = model.generate_content(prompt)
@@ -91,7 +114,7 @@ def generate_conclusion(current_state):
 currentStep = ""
 useCurrentStep = False
 while game_state["outcome"] is None:
-    step = generate_story_step(game_state) if not useCurrentStep else currentStep
+    step = generate_story_step(game_state, maxGainPoints, maxLosingPoints) if not useCurrentStep else currentStep
     useCurrentStep = False
     print(game_state)
 
@@ -141,3 +164,4 @@ while game_state["outcome"] is None:
 conclusion = generate_conclusion(game_state)
 print(conclusion)
 print(f"Game Over! Outcome: {game_state['outcome']}")
+
